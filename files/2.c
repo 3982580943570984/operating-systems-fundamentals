@@ -25,6 +25,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char ** argv) {
     if (entry->d_name[0] == 'a' || entry->d_name[0] == 'z') {
       stat(entry->d_name, &entry_stat);
 
+      // https://stackoverflow.com/questions/40163270/what-is-s-isreg-and-what-does-it-do
       if (S_ISREG(entry_stat.st_mode)) {
         char target_path[512];
         
