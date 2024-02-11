@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-int main(int argc, char *argv[]) {
+
+int main([[maybe_unused]] int argc, [[maybe_unused]] char ** argv) {
   /* Производим считывание исходного текста */
   FILE * input_file = fopen("input.txt", "w");
 
@@ -12,14 +13,12 @@ int main(int argc, char *argv[]) {
   char buffer[buffer_size];
   while(fgets(buffer, buffer_size, stdin) != NULL) {
     if (strncmp(buffer, "END\n", 4) == 0) {
-      printf("Stopping...\n");
       break;
     }
 
     fputs(buffer, input_file);
   }
 
-  printf("first fclose");
   fclose(input_file);
 
   /* Открываем файл на чтение */
@@ -35,14 +34,13 @@ int main(int argc, char *argv[]) {
   fread(text, 1, file_size, input_file);
   text[file_size] = '\0';
 
-  printf("1");
   fclose(input_file);
-  printf("2");
 
   /* Производим обработку текста */
   char * first_word = NULL, * last_word = NULL;
   char * delimeters = " \n\t";
-  char * token = strtok(text, delimeters);
+  char * text_duplicate = strdup(text);
+  char * token = strtok(text_duplicate, delimeters);
 
   if (token != NULL) {
     first_word = token;
@@ -51,7 +49,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("3");
   if (first_word && last_word && strcmp(first_word, last_word) != 0) {
     char * first_pos = strstr(text, first_word);
     char * last_pos = strstr(text, last_word);

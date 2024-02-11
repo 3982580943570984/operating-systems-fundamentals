@@ -1,52 +1,56 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
-int main(int argc, char *argv[]) {
-  /* Производим считывание исходного текста */
-  FILE * input_file = fopen("input.txt", "w");
+#include <fcntl.h>
+#include <sys/types.h>
+#include <dirent.h>
 
-  printf("Введите текст (введите \"END\" для завершения):\n");
+int main([[maybe_unused]] int argc, [[maybe_unused]] char ** argv) {
+  char target_dir[256];
 
-  int buffer_size = 256;
-  char buffer[buffer_size];
-  while(fgets(buffer, buffer_size, stdin)) {
-    if (strncmp(buffer, "END\n", 4) == 0) {
-      break;
-    }
+  printf("Введите имя каталога, в который будет выполнено копирование: ");
+  scanf("%255s", target_dir);
 
-    fputs(buffer, input_file);
+  DIR * dir = opendir(".");
+  if (dir == NULL) {
+    perror("opendir");
+    exit(EXIT_FAILURE);
   }
 
-  fclose(input_file);
+  struct dirent * entry;
+  struct stat entry_stat;
 
-  /* Открываем файл на чтение */
-  input_file = fopen("input.txt", "r");
+  while ((entry = readdir(dir)) != NULL) {
+    if (entry->d_name[0] == 'a' || entry->d_name[0] == 'z') {
+      stat(entry->d_name, &entry_stat);
 
-  /* Определяем размер файла и выделяем память для его содержимого */
-  fseek(input_file, 0, SEEK_END);
-  int file_size = ftell(input_file);
-  char * text = malloc(file_size + 1);
+      if (S_ISREG(entry_stat.st_mode)) {
+        char target_path[512];
+        
+        snprintf(target_path, sizeof(target_path), "%s/%s", target_dir, entry->d_name);
 
-  /* Записываем содержимое файла в буфер */
-  rewind(input_file);
-  fread(text, 1, file_size, input_file);
-  text[file_size] = '\0';
+        int source_fd = open(entry->d_name, O_RDONLY);
+        int destin_fd = open(target_path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
 
-  fclose(input_file);
+        int buffer_size = 256;
+        char buffer[buffer_size];
+        ssize_t bytes_read;
 
-  /* Производим обработку текста */
+        while ((bytes_read = read(source_fd, buffer, buffer_size)) > 0) {
+          write(destin_fd, buffer, bytes_read);
+        }
 
+        close(source_fd);
+        close(destin_fd);
+      }
+    }
+  }
 
-  /* Записываем результат работы в другой файл */
-  FILE * output_file = fopen("output.txt", "w");
-
-  fputs(text, output_file);
-  truncate("output.txt", strlen(text));
-
-  free(text);
-  fclose(output_file);
+  closedir(dir);
 
   exit(EXIT_SUCCESS);
 }
+
+
 
