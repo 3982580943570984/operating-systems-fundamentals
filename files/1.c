@@ -1,11 +1,12 @@
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char ** argv) {
-  /* Производим считывание исходного текста */
-  FILE * input_file = fopen("input.txt", "w");
+  /* Запись текста в файл */
+  int input_fd = open("input.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
 
   printf("Введите текст (введите \"END\" для завершения):\n");
 
@@ -16,25 +17,29 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char ** argv) {
       break;
     }
 
-    fputs(buffer, input_file);
+    write(input_fd, buffer, strlen(buffer));
   }
 
-  fclose(input_file);
+  close(input_fd);
 
-  /* Открываем файл на чтение */
-  input_file = fopen("input.txt", "r");
+  /* Чтение из файла и обработка */
+  input_fd = open("input.txt", O_RDONLY);
 
   /* Определяем размер файла и выделяем память для его содержимого */
-  fseek(input_file, 0, SEEK_END);
-  int file_size = ftell(input_file);
-  char * text = malloc(file_size + 1);
+  int file_size = lseek(input_fd, 0, SEEK_END);
+  char *text = malloc(file_size + 1);
+  lseek(input_fd, 0, SEEK_SET);
 
   /* Записываем содержимое файла в буфер */
-  rewind(input_file);
-  fread(text, 1, file_size, input_file);
+  ssize_t bytes_read = read(input_fd, text, file_size);
+  if (bytes_read < file_size) {
+    perror("Ошибка чтения файла");
+    close(input_fd);
+    free(text);
+    exit(EXIT_FAILURE);
+  }
   text[file_size] = '\0';
-
-  fclose(input_file);
+  close(input_fd);
 
   /* Производим обработку текста */
   char * first_word = NULL, * last_word = NULL;
@@ -67,13 +72,14 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char ** argv) {
   }
 
   /* Записываем результат работы в другой файл */
-  FILE * output_file = fopen("output.txt", "w");
-
-  fputs(text, output_file);
-  truncate("output.txt", strlen(text));
+  int output_fd = open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0777);
+  ssize_t bytes_written = write(output_fd, text, strlen(text));
+  if (bytes_written < 0) {
+    perror("Ошибка записи в файл");
+  }
 
   free(text);
-  fclose(output_file);
+  close(output_fd);
 
   exit(EXIT_SUCCESS);
 }

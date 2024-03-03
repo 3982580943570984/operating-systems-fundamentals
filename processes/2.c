@@ -8,7 +8,7 @@ int main ([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
   printf("%d\n", getpid());
   sleep(1000);
 
-	pid_t pid = fork();
+  pid_t pid = fork();
   if (pid == -1) {
     perror("fork");
     exit(EXIT_FAILURE);
@@ -22,7 +22,7 @@ int main ([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
   } else {
     printf("Родительский процесс: %d\n", getpid());
     int elapsed_time = 0;
-    int wait_time = 1;
+    int wait_time = 4;
     int status;
     while(elapsed_time < wait_time) {
       if (waitpid(pid, &status, WNOHANG) == 0) {
