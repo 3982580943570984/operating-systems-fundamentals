@@ -9,7 +9,7 @@ int requests_from_upstream = 0;
 int requests_from_downstream = 0;
 
 /* Определяем время на перемещение терминала */
-const uint time_for_action = 7;
+const uint time_for_action = 10;
 
 /* Примитивы синхронизации для обработки запросов */
 pthread_cond_t new_request_cond = PTHREAD_COND_INITIALIZER;
@@ -29,6 +29,13 @@ typedef enum terminal_working_state {
   FIXING_WATER_LEVEL,
   IDLING
 } terminal_working_state;
+
+const char *working_state_str[] = {
+    "LOWERING_WATER_LEVEL",
+    "RAISING_WATER_LEVEL",
+    "FIXING_WATER_LEVEL",
+    "IDLING",
+};
 
 struct terminal_t {
   terminal_working_state working_state;

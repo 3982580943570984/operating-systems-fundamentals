@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Threads REQUIRED)
+find_package(Curses REQUIRED)
 
 add_executable(gateway
   ./gateway.c
@@ -22,6 +23,10 @@ add_executable(downstream
   ./globals.h
 )
 
-target_link_libraries(gateway PRIVATE Threads::Threads)
-target_link_libraries(upstream PRIVATE Threads::Threads)
-target_link_libraries(downstream PRIVATE Threads::Threads)
+target_link_libraries(gateway PRIVATE Threads::Threads ${CURSES_LIBRARIES})
+target_link_libraries(upstream PRIVATE Threads::Threads ${CURSES_LIBRARIES})
+target_link_libraries(downstream PRIVATE Threads::Threads ${CURSES_LIBRARIES})
+
+target_include_directories(gateway PRIVATE ${CURSES_INCLUDE_DIR})
+target_include_directories(upstream PRIVATE ${CURSES_INCLUDE_DIR})
+target_include_directories(downstream PRIVATE ${CURSES_INCLUDE_DIR})

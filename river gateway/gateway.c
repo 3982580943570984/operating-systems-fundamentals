@@ -13,7 +13,6 @@ void *raise_terminal(void *arg) {
   struct terminal_t *terminal = (struct terminal_t *)arg;
 
   pthread_mutex_lock(&gateway_mutex);
-  printf("Поднимаем терминал\n");
   terminal->lower_site_opened = false;
   terminal->working_state = RAISING_WATER_LEVEL;
   pthread_mutex_unlock(&gateway_mutex);
@@ -48,7 +47,6 @@ void *lower_terminal(void *arg) {
   struct terminal_t *terminal = (struct terminal_t *)arg;
 
   pthread_mutex_lock(&gateway_mutex);
-  printf("Опускаем терминал\n");
   terminal->upper_site_opened = false;
   terminal->working_state = LOWERING_WATER_LEVEL;
   pthread_mutex_unlock(&gateway_mutex);
@@ -120,40 +118,47 @@ void *handle_requests(void *arg) {
 
     /* Проверяем наличие свободного терминала */
     pthread_mutex_lock(&gateway_mutex);
-    int available_on_upstream = NOT_AVAILABLE, available_on_downstream = NOT_AVAILABLE;
+    int available_on_upstream = NOT_AVAILABLE,
+        available_on_downstream = NOT_AVAILABLE;
     for (int i = 0; i < TERMINALS_COUNT; ++i) {
-      if (available_on_upstream != NOT_AVAILABLE && available_on_downstream != NOT_AVAILABLE) break;
+      if (available_on_upstream != NOT_AVAILABLE &&
+          available_on_downstream != NOT_AVAILABLE)
+        break;
 
       if (gateway.terminals[i].working_state == IDLING) {
-        if (gateway.terminals[i].upper_site_opened && available_on_upstream == NOT_AVAILABLE) {
+        if (gateway.terminals[i].upper_site_opened &&
+            available_on_upstream == NOT_AVAILABLE) {
           available_on_upstream = i;
-        } else if (gateway.terminals[i].lower_site_opened && available_on_downstream == NOT_AVAILABLE) {
+        } else if (gateway.terminals[i].lower_site_opened &&
+                   available_on_downstream == NOT_AVAILABLE) {
           available_on_downstream = i;
         }
       }
     }
 
     /* Производим ожидание до сигнала о наличии свободного терминале */
-    while (available_on_upstream == NOT_AVAILABLE && available_on_downstream == NOT_AVAILABLE) {
+    while (available_on_upstream == NOT_AVAILABLE &&
+           available_on_downstream == NOT_AVAILABLE) {
       pthread_cond_wait(&terminal_available_cond, &gateway_mutex);
 
       /* После пробуждения снова проверяем наличие свободного терминала */
       for (int i = 0; i < TERMINALS_COUNT; ++i) {
-        if (available_on_upstream != NOT_AVAILABLE && available_on_downstream != NOT_AVAILABLE) break;
+        if (available_on_upstream != NOT_AVAILABLE &&
+            available_on_downstream != NOT_AVAILABLE)
+          break;
 
         if (gateway.terminals[i].working_state == IDLING) {
-          if (gateway.terminals[i].upper_site_opened && available_on_upstream == NOT_AVAILABLE) {
+          if (gateway.terminals[i].upper_site_opened &&
+              available_on_upstream == NOT_AVAILABLE) {
             available_on_upstream = i;
-          } else if (gateway.terminals[i].lower_site_opened && available_on_downstream == NOT_AVAILABLE) {
+          } else if (gateway.terminals[i].lower_site_opened &&
+                     available_on_downstream == NOT_AVAILABLE) {
             available_on_downstream = i;
           }
         }
       }
     }
-    pthread_mutex_unlock(&gateway_mutex); 
-
-    printf("is available on upstream = %d\n", available_on_upstream != NOT_AVAILABLE);
-    printf("is available on downstream = %d\n", available_on_downstream != NOT_AVAILABLE);
+    pthread_mutex_unlock(&gateway_mutex);
 
     pthread_mutex_lock(&gateway_mutex);
     pthread_mutex_lock(&new_request_mutex);
@@ -162,7 +167,8 @@ void *handle_requests(void *arg) {
       /* Обработка запроса от верхнего и нижнего течения */
 
       pthread_t request_from_upstream_and_downstream_thread;
-      if (available_on_upstream != NOT_AVAILABLE && available_on_downstream != NOT_AVAILABLE) {
+      if (available_on_upstream != NOT_AVAILABLE &&
+          available_on_downstream != NOT_AVAILABLE) {
         available_terminal = &gateway.terminals[available_on_downstream];
         pthread_create(&request_from_upstream_and_downstream_thread, NULL,
                        handle_terminal_raise_and_lower,
@@ -189,11 +195,11 @@ void *handle_requests(void *arg) {
       if (available_on_upstream != NOT_AVAILABLE) {
         available_terminal = &gateway.terminals[available_on_upstream];
         pthread_create(&request_from_upstream_thread, NULL,
-                       handle_terminal_lower,
-                       (void *)available_terminal);
+                       handle_terminal_lower, (void *)available_terminal);
       } else if (available_on_downstream != NOT_AVAILABLE) {
         available_terminal = &gateway.terminals[available_on_downstream];
-        pthread_create(&request_from_upstream_thread, NULL, handle_terminal_raise_and_lower,
+        pthread_create(&request_from_upstream_thread, NULL,
+                       handle_terminal_raise_and_lower,
                        (void *)available_terminal);
       }
       pthread_detach(request_from_upstream_thread);
@@ -205,8 +211,8 @@ void *handle_requests(void *arg) {
       pthread_t request_from_downstream_thread;
       if (available_on_downstream != NOT_AVAILABLE) {
         available_terminal = &gateway.terminals[available_on_downstream];
-        pthread_create(&request_from_downstream_thread, NULL, handle_terminal_raise,
-                       (void *)available_terminal);
+        pthread_create(&request_from_downstream_thread, NULL,
+                       handle_terminal_raise, (void *)available_terminal);
       } else if (available_on_upstream != NOT_AVAILABLE) {
         available_terminal = &gateway.terminals[available_on_upstream];
         pthread_create(&request_from_downstream_thread, NULL,
@@ -280,6 +286,41 @@ void *handle_downstream_signals(void *arg) {
   return NULL;
 }
 
+void *handle_logging(void *arg) {
+  while (true) {
+    system("clear");
+
+    printf("requests_from_upstream = %d\n", requests_from_upstream);
+    printf("requests_from_downstream = %d\n", requests_from_downstream);
+
+    pthread_mutex_lock(&gateway_mutex);
+    for (int i = 0; i < TERMINALS_COUNT; ++i) {
+      struct terminal_t *terminal = &gateway.terminals[i];
+
+      printf("gateway.terminals[%d].working_state = %s\n", i,
+             working_state_str[terminal->working_state]);
+
+      printf("gateway.terminals[%d].is_working = %s\n", i,
+             terminal->is_working ? "true" : "false");
+
+      printf("gateway.terminals[%d].lower_site_opened = %s\n", i,
+             terminal->lower_site_opened ? "true" : "false");
+      printf("gateway.terminals[%d].upper_site_opened = %s\n", i,
+             terminal->upper_site_opened ? "true" : "false");
+
+      printf("\n");
+    }
+    pthread_mutex_unlock(&gateway_mutex);
+
+    struct timespec ts;
+    ts.tv_sec = 500 / 1000;
+    ts.tv_nsec = (500 % 1000) * 1000000;
+    nanosleep(&ts, NULL);
+  }
+
+  return NULL;
+}
+
 int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
   /* Поток для обработки запросов от верхнего течения */
   pthread_t upstream_thread;
@@ -292,6 +333,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
   /* Поток для обработки запросов */
   pthread_t requests_thread;
   pthread_create(&requests_thread, NULL, handle_requests, NULL);
+
+  /* Поток для обработки логирования */
+  pthread_t logging_thread;
+  pthread_create(&logging_thread, NULL, handle_logging, NULL);
 
   pthread_join(upstream_thread, NULL);
   pthread_join(downstream_thread, NULL);

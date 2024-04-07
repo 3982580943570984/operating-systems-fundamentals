@@ -4,8 +4,6 @@ set -e
 
 build_dir="./build/"
 
-gateway_upstream_fifo="/tmp/gateway_upstream"
-gateway_downstream_fifo="/tmp/gateway_downstream"
 upstream_gateway_fifo="/tmp/upstream_gateway"
 downstream_gateway_fifo="/tmp/downstream_gateway"
 
@@ -30,13 +28,12 @@ recreate_fifo() {
   mkfifo -m 0777 "$fifo_path"
 }
 
-recreate_fifo $gateway_upstream_fifo
-recreate_fifo $gateway_downstream_fifo
 recreate_fifo $upstream_gateway_fifo
 recreate_fifo $downstream_gateway_fifo
 
 # Запускаем проект
-xterm -e "./gateway" &
-xterm -e "./upstream" &
-xterm -e "./downstream" &
+xterm -geometry 80x24-718+382 -e "./gateway" &    # Центральное окно
+xterm -geometry 80x24-0+382 -e "./upstream" &   # Справа от центра
+xterm -geometry 80x24-1436+382 -e "./downstream" & # Слева от центра
+
 wait
